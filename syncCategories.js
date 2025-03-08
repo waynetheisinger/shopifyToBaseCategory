@@ -43,26 +43,6 @@ const SHOPIFY_QUERY = `
 }
 `;
 
-async function getShopifyCategories() {
-    try {
-        const response = await axios({
-            url: `https://${SHOPIFY_STORE}/admin/api/2023-10/graphql.json`,
-            method: 'POST',
-            headers: {
-                'X-Shopify-Access-Token': SHOPIFY_ACCESS_TOKEN,
-                'Content-Type': 'application/json',
-            },
-            data: {
-                query: SHOPIFY_QUERY,
-            },
-        });
-
-        return response.data.data.products.edges;
-    } catch (error) {
-        console.error('Error fetching Shopify categories:', error);
-    }
-}
-
 async function fetchShopifyCategories() {
   let categories = new Set();
     let hasNextPage = true;
@@ -156,10 +136,19 @@ async function fetchBaselinkerCategories() {
   try {
       const response = await axios.post('https://api.baselinker.com/connector.php', new URLSearchParams({
           method: 'getInventoryCategories',
-          inventory_id: BASELINKER_INVENTORY_ID
+          parameters: JSON.stringify({inventory_id: BASELINKER_INVENTORY_ID})
       }), {
-          headers: { "X-BLToken": BASELINKER_API_KEY }
+          headers: { 
+            "X-BLToken": BASELINKER_API_KEY, 
+            "Content-Type": "application/x-www-form-urlencoded" 
+          }
       });
+
+      // Check if Baselinker returned an error inside response.data
+      if (response.data.status === 'ERROR') {
+        console.error(`Baselinker API Error: ${response.data.error_code} - ${response.data.error_message}`);
+        return null;
+      }
 
       return response.data.categories || {};
   } catch (error) {
@@ -171,14 +160,26 @@ async function fetchBaselinkerCategories() {
 // Add Category to Baselinker
 async function addBaselinkerCategory(categoryName, parentId = 0) {
   try {
-      const response = await axios.post('https://api.baselinker.com/connector.php', new URLSearchParams({
-          method: 'addInventoryCategory',
+      console.log(`Adding Baselinker category: ${categoryName} (Parent: ${parentId})`);
+      const params = new URLSearchParams();
+      params.append('method', 'addInventoryCategory');
+      params.append('parameters', JSON.stringify({
           inventory_id: BASELINKER_INVENTORY_ID,
-          parent_id: parentId,
+          parent_id: Number(parentId),
           name: categoryName
-      }), {
-          headers: { "X-BLToken": BASELINKER_API_KEY }
+      }));
+      const response = await axios.post('https://api.baselinker.com/connector.php', params, {
+          headers: { 
+            "X-BLToken": BASELINKER_API_KEY, 
+            "Content-Type": "application/x-www-form-urlencoded" 
+          }
       });
+
+        // Check if Baselinker returned an error inside response.data
+      if (response.data.status === 'ERROR') {
+          console.error(`Baselinker API Error: ${response.data.error_code} - ${response.data.error_message}`);
+          return null;
+      }
 
       return response.data.category_id;
   } catch (error) {
@@ -206,6 +207,15 @@ async function syncCategories() {
   for (const categoryName in categoryTree) {
       let categoryData = categoryTree[categoryName];
       let parentId = categoryData.parent ? baselinkerCategoryLookup[categoryData.parent] || 0 : 0;
+
+      if (categoryData.parent) {
+          // Ensure parent is added first
+          if (!baselinkerCategoryLookup[categoryData.parent]) {
+            console.error(`❌ ERROR: Parent category "${categoryData.parent}" is missing. Sync aborted.`);
+            process.exit(1); // Exit with a failure code
+          }
+          parentId = baselinkerCategoryLookup[categoryData.parent];
+      }
 
       if (DRY_RUN) {
         console.log(`[Dry Run] Would add category: "${categoryName}" (Parent: ${categoryData.parent || "Root"})`);

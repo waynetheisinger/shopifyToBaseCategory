@@ -23,9 +23,9 @@ async function fetchShopifyProducts() {
                           id
                           title
                           category {
-                              fullName
+                              name
                           }
-                          variants(first: 1) {  // Fetch at least one variant (Baselinker tracks variants)
+                          variants(first: 1) {
                               edges {
                                   node {
                                       sku
@@ -61,7 +61,7 @@ async function fetchShopifyProducts() {
                   id: node.id,
                   title: node.title,
                   sku: node.variants.edges.length > 0 ? node.variants.edges[0].node.sku : null,
-                  category: node.category ? node.category.fullName : null
+                  category: node.category ? node.category.name : null
               });
           });
 
@@ -112,7 +112,7 @@ async function fetchBaselinkerProducts(productIDs) {
       try {
           const params = new URLSearchParams();
           params.append("method", "getInventoryProductsData");
-          params.append("parameters", JSON.stringify({ products: batch }));
+          params.append("parameters", JSON.stringify({inventory_id: BASELINKER_INVENTORY_ID, products: batch }));
 
           const response = await axios.post("https://api.baselinker.com/connector.php", params, {
               headers: {

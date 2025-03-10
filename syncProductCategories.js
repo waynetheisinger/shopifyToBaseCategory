@@ -212,8 +212,8 @@ async function updateBaselinkerProductCategory(productId, categoryId) {
       params.append("method", "addInventoryProduct");
       params.append("parameters", JSON.stringify({
           inventory_id: BASELINKER_INVENTORY_ID,
-          product_id: productId, // Required to update the existing product
-          category_id: categoryId // Only updating the category
+          product_id: productId, // Ensures it only updates existing products
+          category_id: categoryId // Updating category only
       }));
 
       const response = await axios.post("https://api.baselinker.com/connector.php", params, {
@@ -263,6 +263,12 @@ async function syncShopifyProductsToBaselinker() {
 
       if (!shopify.category) continue; // Skip if no category
 
+      // Skip products that don't exist in Baselinker
+      if (!baselinker) {
+          console.log(`❌ Skipping product "${shopify.title}" (SKU: ${sku}) as it does not exist in Baselinker.`);
+          continue;
+      }
+
       // Find Baselinker category ID
       const baselinkerCategoryId = Object.values(baselinkerCategories)
           .find(c => c.name === shopify.category)?.category_id;
@@ -279,9 +285,9 @@ async function syncShopifyProductsToBaselinker() {
       }
 
       if (DRY_RUN) {
-          console.log(`[Dry Run] Would update Baselinker product "${baselinker.name}" (SKU: ${sku}) to category "${shopify.category}" (Category ID: ${baselinkerCategoryId})`);
+          console.log(`[Dry Run] Would update category for "${baselinker.name}" (SKU: ${sku}) to "${shopify.category}" (Category ID: ${baselinkerCategoryId})`);
       } else {
-          console.log(`Updating Baselinker product "${baselinker.name}" (SKU: ${sku}) to category "${shopify.category}"`);
+          console.log(`Updating category for "${baselinker.name}" (SKU: ${sku})`);
           await updateBaselinkerProductCategory(baselinker.id, baselinkerCategoryId);
       }
   }

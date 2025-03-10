@@ -1,13 +1,15 @@
 ## **Shopify to Baselinker Category Sync**  
 
 This Node.js script **synchronizes product categories** from **Shopify** to **Baselinker**.  
-It ensures that Baselinker only contains **categories where products exist** in Shopify.  
+It ensures that Baselinker only contains **categories where products exist** in Shopify and ensures that Baselinker products are always assigned to the correct categories but does not create new products.
 
 ### **Features**
-✔ Fetches **all products' categories** from Shopify (handles pagination).  
-✔ Maintains **category hierarchy** when adding to Baselinker.  
-✔ **Dry-run mode** for previewing changes before applying them.  
-✔ Runs **periodically via cron** for automatic updates.  
+✔ Fetches all Shopify product categories and maintains category hierarchy in Baselinker.  
+✔ Assigns the correct category to products in Baselinker based on Shopify data.  
+✔ Only updates existing products in Baselinker (no new product creation).  
+✔ Uses addInventoryProduct to update only the category.  
+✔ Dry-run mode to preview changes before applying them.  
+✔ Runs periodically via cron for automatic updates.  
 
 ---
 
@@ -37,16 +39,17 @@ BASELINKER_INVENTORY_ID=your_inventory_id
 DRY_RUN=true  # Set to false to sync categories to Baselinker
 ```
 
-### **4. Run the Script**
+### **4. Run the Scripts**
 #### **Preview Changes (Dry Run)**
 ```sh
 node syncCategories.js
+node syncProductCategories.js
 ```
 This **won't modify Baselinker** but will show what would be added.
 
 #### **Apply Changes (Sync to Baselinker)**
 ```sh
-DRY_RUN=false node syncCategories.js
+DRY_RUN=false node syncCategories.js && syncProductCategories.js
 ```
 
 ---
@@ -59,6 +62,12 @@ DRY_RUN=false node syncCategories.js
 5. **Adds only missing categories** to Baselinker (no deletions).  
 
 ---
+## Product Category Sync
+1. **Fetches all Shopify products** (including SKU & category).
+2. **Retrieves Baselinker product IDs**, then fetches **detailed product data** in batches.
+3. **Only updates products that already exist in Baselinker** (does not create new products).
+4. Finds the correct Baselinker category for each product.
+5. Uses addInventoryProduct to update the category for existing products.
 
 ## **Automate with Cron**
 Run the script **daily at 2 AM**:  

@@ -280,14 +280,14 @@ async function syncShopifyProductsToBaselinker() {
 
       // Only update if the category is different
       if (baselinker.category_id === baselinkerCategoryId) {
-          console.log(`✅ No change needed for "${baselinker.name}" (SKU: ${sku}), already in correct category.`);
+          console.log(`✅ No change needed for "${baselinker.text_fields.name}" (SKU: ${sku}), already in correct category.`);
           continue;
       }
 
       if (DRY_RUN) {
-          console.log(`[Dry Run] Would update category for "${baselinker.name}" (SKU: ${sku}) to "${shopify.category}" (Category ID: ${baselinkerCategoryId})`);
+          console.log(`[Dry Run] Would update category for "${baselinker.text_fields.name}" (SKU: ${sku}) to "${shopify.category}" (Category ID: ${baselinkerCategoryId})`);
       } else {
-          console.log(`Updating category for "${baselinker.name}" (SKU: ${sku})`);
+          console.log(`Updating category for "${baselinker.text_fields.name}" (SKU: ${sku})`);
           await updateBaselinkerProductCategory(baselinker.id, baselinkerCategoryId);
       }
   }
